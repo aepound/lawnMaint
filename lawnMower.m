@@ -84,7 +84,7 @@ end
 
 methods
 
-  function run(obj,nMins)
+  function timeRan = run(obj,nMins)
     nSamples = min2sec(nMins)*obj.Fs_run;
     
     partFailed = false;
@@ -102,7 +102,7 @@ methods
     maxGallonsUsed = obj.gallonsUsed(nMins);
     
     try
-      realGallons = obj.useGas(maxGallonsUsed); %#ok<NASGU>
+      realGallons = obj.useGas(maxGallonsUsed);
     catch me
       if strcmp(me.identifier,'lawnMwr:OutOfGas')
         rethrow(me);
@@ -111,6 +111,7 @@ methods
     if partFailed
       error('lawnMwr:partFailed','Part has Failed!')
     end
+    timeRan = obj.runtime(realGallons);
   end
     
 end
@@ -139,16 +140,22 @@ methods(Hidden)
     amount = obj.gasGallons;
   end
   function time = runtimeIfFull(obj)
-    time = runtime(obj.gasTankSize);
+    time = runtime(obj,obj.gasTankSize);
   end
   function time = runtimeLeft(obj)
-    time = runtime(gallonsUntilEmpty(obj));
+    time = runtime(obj,gallonsUntilEmpty(obj));
   end
   function time = runtime(obj,gallons)
     time = gallons./obj.gasUsageRate;
   end
   function gallons = gallonsUsed(obj,time)
     gallons = time.*obj.gasUsageRate;
+  end
+  function tf = gasEmpty(obj)
+    tf = true;
+    if obj.gasLevel
+      tf = false;
+    end
   end
 end
 
