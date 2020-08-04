@@ -57,7 +57,10 @@ classdef lawnMowerTest < matlab.unittest.TestCase
       testCase.mower.siphonGas();
       testCase.assertTrue(testCase.mower.gasLevel == 0)
     end
-    
+  end
+  
+  methods(Test)
+    % Running the mower...
     function runMowerUsesGas(testCase)
       time = 15; % mins
       testCase.mower.fillGas();
@@ -81,14 +84,34 @@ classdef lawnMowerTest < matlab.unittest.TestCase
       
       testCase.assertTrue(gasDiff2 > gasDiff);
     end
-    
-    function runMowerForeverYieldsEmptyTank(testCase)
+    % Empty error testing:
+    function runMowerForeverRunsOutOfGas(testCase)
       testCase.mower.fillGas();
-      testCase.mower.run(inf);
-      testCase.assertEqual(testCase.mower.gasLevel, 0);
+      testCase.assertError(@()testCase.mower.run(inf), 'lawnMwr:OutOfGas');
+    end
+    function throwsExceptionWhenRunningOnEmpty(testCase)
+      testCase.mower.siphonGas();
+      testCase.assertError(@()testCase.mower.run(1),'lawnMwr:OutOfGas');
+    end
+    function noThrowWhenRunningToExactEmpty(testCase)
+      testCase.mower.siphonGas();
+      testCase.mower.fillGas(testCase.mower.gasUsageRate);
+      testCase.mower.run(1);
+      testCase.assertTrue(testCase.mower.gasLevel == 0);
     end
     
-    function 
+    function runningMowerChangesState(testCase)
+      testCase.mower.fillGas();
+      prevState = testCase.mower.state;
+      testCase.mower.run(10);
+      newState  = testCase.mower.state;
+      testCase.verifyNotEqual(prevState,newState);
+    end
+    
+  end
+  methods(Test)
+    % Longer-term issues???
+    function breaksDownWhenRandomBreakTriggered(testCase)
       
     end
   end
