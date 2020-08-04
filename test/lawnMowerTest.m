@@ -111,10 +111,57 @@ classdef lawnMowerTest < matlab.unittest.TestCase
   end
   methods(Test)
     % Longer-term issues???
-    function breaksDownWhenRandomBreakTriggered(testCase)
-      
+    function throwsErrorWhenPartFails(testCase)
+      testCase.mower.fillGas();
+      func = @(obj) true;
+      testCase.mower.Fs_run = 1/60;
+      testCase.mower.hasPartFailed = func;
+      testCase.verifyError(@()testCase.mower.run(3),'lawnMwr:partFailed');
+    end
+    
+    function throwsErrorOn3rdSampleWhenPartFails(testCase)
+      testCase.mower.fillGas();
+      testCase.mower.state.counter = 0;
+      func = @(obj) incrementStateCounterReturnTrueAtN(obj,3);
+      testCase.mower.hasPartFailed = func;
+      testCase.mower.Fs_run = 1/60;
+      try
+        testCase.mower.run(5); % This will fail..
+      catch
+      end
+      testCase.verifyTrue(testCase.mower.state.counter == 3);      
+    end
+    function setRunSampleFrequency(testCase)
+      testCase.mower.Fs_run = 1/60; % Hz = 1 min;
+    end
+    function setHasPartFailedFunction(testCase)
+      func = @(obj) true;
+      testCase.mower.hasPartFailed = func;
+      testCase.verifyEqual(testCase.mower.hasPartFailed, func)
+    end
+    function checkRunUsesHasPartFailed(testCase)
+      testCase.mower.fillGas();
+      testCase.mower.state.counter = 0;
+      func = @(obj) incrementStateCounterReturnFalse(obj);
+      testCase.mower.hasPartFailed = func;
+      testCase.mower.Fs_run = 1/60;
+      testCase.mower.run(2);
+      testCase.verifyTrue(testCase.mower.state.counter == 2);
     end
   end
+  
     
     
+end
+function out = incrementStateCounterReturnTrueAtN(obj,N)
+obj.state.counter = obj.state.counter+1;
+if obj.state.counter == N
+  out = true;
+else
+  out = false;
+end
+end
+function out = incrementStateCounterReturnFalse(obj)
+obj.state.counter = obj.state.counter+1;
+out = false;
 end

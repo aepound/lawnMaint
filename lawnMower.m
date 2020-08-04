@@ -12,6 +12,12 @@ properties
   gasUsageRate = .5/60; % half Gallon / hour... Units = gallons/min
 end
 
+properties
+  % Having to do with part failures:
+  Fs_run = 0;
+  hasPartFailed;
+end
+
 properties(Hidden)
   state
 end
@@ -21,6 +27,7 @@ methods
   function obj = lawnMower(varargin)
     obj.state.usage.lifetime = 0;
     obj.state.usage.blade = 0;
+    obj.hasPartFailed = @(varargin) false;
   end
 end
 
@@ -61,7 +68,7 @@ methods
     
   end
   
-  
+ 
   
   function amountRemoved = useGas(obj,amount)
     % throws error when out of gas
@@ -78,13 +85,31 @@ end
 methods
 
   function run(obj,nMins)
+    nSamples = min2sec(nMins)*obj.Fs_run;
+    
+    partFailed = false;
+    for iter = 1:nSamples
+      % Call the function...
+      partFailed = obj.hasPartFailed(obj);
+      if partFailed
+        % Then we only run up to this point
+        nSecs = iter./obj.Fs_run;
+        nMins = sec2min(nSecs);
+        break
+      end
+    end
+    
     maxGallonsUsed = obj.gallonsUsed(nMins);
+    
     try
       realGallons = obj.useGas(maxGallonsUsed); %#ok<NASGU>
     catch me
       if strcmp(me.identifier,'lawnMwr:OutOfGas')
         rethrow(me);
       end
+    end
+    if partFailed
+      error('lawnMwr:partFailed','Part has Failed!')
     end
   end
     
@@ -104,8 +129,8 @@ methods(Hidden)
     obj.gasGallons = obj.gasGallons - amount;
   end
   function addTimeToState(obj,time)
+    % Using structfun() adds the time to all the usages...
     obj.state.usage = structfun(@(x) x+time,obj.state.usage,'uni',0);
-    %obj.state.usage.lifetime = obj.state.usage.lifetime + time;
   end
   function amount = gallonsUntilFull(obj)
     amount = obj.gasTankSize - obj.gasGallons;
@@ -117,7 +142,7 @@ methods(Hidden)
     time = runtime(obj.gasTankSize);
   end
   function time = runtimeLeft(obj)
-    time = runtime(obj.gasGallons);
+    time = runtime(gallonsUntilEmpty(obj));
   end
   function time = runtime(obj,gallons)
     time = gallons./obj.gasUsageRate;
@@ -128,4 +153,11 @@ methods(Hidden)
 end
 
 
+end
+
+function sec = min2sec(min)
+  sec = min*60;
+end
+function min = sec2min(sec)
+  min = sec./60;
 end
