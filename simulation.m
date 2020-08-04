@@ -36,9 +36,12 @@ end
 close all
 figure, 
 for iter = 1:length(fillUps)
-  plot(fillUps{iter},'*')
+  plot(fillUps{iter}./60,'*')
   hold on
 end
+ylabel('Hour of Work')
+xlabel('Fillup #')
+title('Time of Fillup during the Week')
 legend('mon','tues','weds','thurs','fri','sat')
 grid on
 
